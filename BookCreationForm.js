@@ -28,11 +28,8 @@ export const BookCreationForm = () => {
   // useEffect is called after the component is initially rendered and
   // after every other render
   useEffect(() => {
-    // Since the async method Parse.User.currentAsync is needed to
-    // retrieve the current user data, you need to declare an async
-    // function here and call it afterwards
     async function getFormChoices() {
-      // This condition ensures that username is updated only if needed
+      // This condition ensures that data is updated only if needed
       if (publishers === null && authors === null && genres === null) {
         // Query all choices
         for (let choiceObject of ['Publisher', 'Author', 'Genre']) {
@@ -65,33 +62,62 @@ export const BookCreationForm = () => {
   // Functions used by the screen components
   const createBook = async function () {
     try {
-      // This values come from state variables
+      // This values come from state variables linked to
+      // the screen form fields, retrieving the user choices
+      // as a complete Parse.Object, when applicable;
       const bookTitleValue = bookTitle;
       const bookISBDValue = bookISBD;
+      // For example, bookPublisher holds the value from
+      // RadioButton.Group field with its options being every
+      // Publisher parse object instance saved on server, which is
+      // queried on screen load via useEffect
       const bookPublisherObject = bookPublisher;
-      const bookAuthorsObjects = bookAuthors;
       const bookGenreObject = bookGenre;
-
-      let dataToSet = {};
-      dataToSet = {
-        title: bookTitleValue,
-        isbd: bookISBDValue,
-        // one-to-many relations
-        // add direct object to field
-        publisher: bookPublisherObject,
-        // add pointer to field
-        genre: bookGenreObject.toPointer(),
-      };
+      // bookAuthors can be an array of Parse.Objects, since the book
+      // may have more than one Author
+      const bookAuthorsObjects = bookAuthors;
 
       // Creates a new parse object instance
       const objectParseObject = Parse.Object.extend('Book');
       let newObject = new objectParseObject();
 
       // Set data to parse object
-      newObject.set(dataToSet);
+      // Simple title field
+      newObject.set('title', bookTitleValue);
+
+      // 1:1 relation, need to check for uniqueness of value before creating a new ISBD object
+      let isbdQuery = new Parse.Query('ISBD');
+      isbdQuery.equalTo('name', bookISBDValue);
+      let isbdQueryResult = await isbdQuery.first();
+      if (isbdQueryResult !== null && isbdQueryResult !== undefined) {
+        // If first returns a valid object instance, it means that there
+        // is at least one instance of ISBD with the informed value
+        Alert.alert(
+          'Error!',
+          'There is already an ISBD instance with this value!',
+        );
+        return false;
+      } else {
+        // Create a new ISBD object instance to create a one-to-one relation on saving
+        const isbdParseObject = Parse.Object.extend('ISBD');
+        let isbdObject = new isbdParseObject();
+        isbdObject.set('name', bookISBDValue);
+        isbdObject = await isbdObject.save();
+        // Set the new object to the new book object ISBD field
+        newObject.set('isbd', isbdObject);
+      }
+
+      // One-to-many relations can be set in two ways:
+      // add direct object to field (Parse will convert to pointer on save)
+      newObject.set('publisher', bookPublisherObject);
+      // or add pointer to field
+      newObject.set('genre', bookGenreObject.toPointer());
 
       // many-to-many relation
+      // Create a new relation so data can be added
       let authorsRelation = newObject.relation('authors');
+      // bookAuthorsObjects is an array of Parse.Objects,
+      // you can add to relation by adding the whole array or object by object
       authorsRelation.add(bookAuthorsObjects);
 
       // After setting the values, save it on the server

@@ -18,17 +18,19 @@ export const BookList = () => {
   const [publishers, setPublishers] = useState(null);
   const [authors, setAuthors] = useState(null);
   const [genres, setGenres] = useState(null);
+  const [isbds, setIsbds] = useState(null);
   const [queryPublisher, setQueryPublisher] = useState('');
   const [queryAuthor, setQueryAuthor] = useState('');
   const [queryGenre, setQueryGenre] = useState('');
-  const [queriedBooks, setQueriedBooks] = useState(null);
+  const [queryIsbd, setQueryIsbd] = useState('');
+  const [queriedBooks, setQueriedBooks] = useState([]);
 
   // useEffect is called after the component is initially rendered and
   // after every other render
   useEffect(() => {
     async function getQueryChoices() {
       // Query all choices
-      for (let choiceObject of ['Publisher', 'Author', 'Genre']) {
+      for (let choiceObject of ['Publisher', 'Author', 'Genre', 'ISBD']) {
         let newQuery = new Parse.Query(choiceObject);
         await newQuery
           .find()
@@ -41,6 +43,8 @@ export const BookList = () => {
               setAuthors(queryResults);
             } else if (choiceObject === 'Genre') {
               setGenres(queryResults);
+            } else if (choiceObject === 'ISBD') {
+              setIsbds(queryResults);
             }
             return true;
           })
@@ -53,17 +57,30 @@ export const BookList = () => {
       queryBooks();
     }
     // This condition ensures that username is updated only if needed
-    if (publishers === null && authors === null && genres === null) {
+    if (
+      publishers === null &&
+      authors === null &&
+      genres === null &&
+      isbds === null
+    ) {
       getQueryChoices();
     }
-  }, [publishers, authors, genres]);
+  }, [publishers, authors, genres, isbds]);
 
   const queryBooks = async function () {
+    // This values come from state variables linked to
+    // the screen query RadioButton.Group fields, with its options being every
+    // parse object instance saved on server from the referred class, which is
+    // queried on screen load via useEffect; this variables retrievie the user choices
+    // as a complete Parse.Object;
     const queryPublisherValue = queryPublisher;
     const queryGenreValue = queryGenre;
     const queryAuthorValue = queryAuthor;
+    const queryIsbdValue = queryIsbd;
+
     // Reading parse objects is done by using Parse.Query
     const parseQuery = new Parse.Query('Book');
+
     // One-to-many queries
     if (queryPublisherValue !== '') {
       parseQuery.equalTo('publisher', queryPublisherValue);
@@ -71,17 +88,26 @@ export const BookList = () => {
     if (queryGenreValue !== '') {
       parseQuery.equalTo('genre', queryGenreValue);
     }
+
+    // One-to-one query
+    if (queryIsbdValue !== '') {
+      parseQuery.equalTo('isbd', queryIsbdValue);
+    }
+
     // Many-to-many query
+    // In this case, we need to retrieve books related to the chosen author
     if (queryAuthorValue !== '') {
       parseQuery.equalTo('authors', queryAuthorValue);
     }
-    // TODO: one-to-one ISBD query
+
     return await parseQuery
       .find()
       .then(async books => {
-        // Be aware that empty or invalid queries return as an empty array
-        // Set results to state variable
+        // Many-to-many objects retrieval
+        // In this example we need to get every related author Parse.Object
+        // and add it to our query result objects
         for (let book of books) {
+          // This query is done by creating a relation and querying it
           let bookAuthorsRelation = book.relation('authors');
           book.authorsObjects = await bookAuthorsRelation.query().find();
         }
@@ -109,7 +135,9 @@ export const BookList = () => {
                 title={book.get('title')}
                 description={`Publisher: ${book
                   .get('publisher')
-                  .get('name')}, ISBD: ${book.get('isbd')}, Genre: ${book
+                  .get('name')}, ISBD: ${book
+                  .get('isbd')
+                  .get('name')}, Genre: ${book
                   .get('genre')
                   .get('name')}, Author(s): ${book.authorsObjects.map(
                   author => `${author.get('name')}`,
@@ -166,6 +194,21 @@ export const BookList = () => {
                       key={`${index}`}
                       label={author.get('name')}
                       value={author}
+                    />
+                  ))}
+                </List.Accordion>
+              </RadioButton.Group>
+            )}
+            {isbds !== null && (
+              <RadioButton.Group
+                onValueChange={newValue => setQueryIsbd(newValue)}
+                value={queryIsbd}>
+                <List.Accordion title="ISBD">
+                  {isbds.map((isbd, index) => (
+                    <RadioButton.Item
+                      key={`${index}`}
+                      label={isbd.get('name')}
+                      value={isbd}
                     />
                   ))}
                 </List.Accordion>
