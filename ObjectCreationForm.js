@@ -22,38 +22,24 @@ export const ObjectCreationForm = () => {
     // This values come from state variables
     const objectNameValue = objectName;
 
-    let dataToSet = {};
+    // Creates a new parse object instance
+    let ParseObject = new Parse.Object(objectType);
+
+    // Set data to parse object
+    ParseObject.set('name', objectNameValue);
+
+    // After setting the values, save it on the server
     try {
-      dataToSet = {
-        name: objectNameValue,
-      };
+      await ParseObject.save();
+      // Success
+      Alert.alert('Success!');
+      navigation.goBack();
+      return true;
     } catch (error) {
-      // Error can be caused by wrong type of values in fields
+      // Error can be caused by lack of Internet connection
       Alert.alert('Error!', error.message);
       return false;
     }
-
-    // Creates a new parse object instance
-    const objectParseObject = Parse.Object.extend(objectType);
-    let newObject = new objectParseObject();
-
-    // Set data to parse object
-    newObject.set(dataToSet);
-
-    // After setting the values, save it on the server
-    return await newObject
-      .save()
-      .then(async _result => {
-        // Success
-        Alert.alert('Success!');
-        navigation.goBack();
-        return true;
-      })
-      .catch(error => {
-        // Error can be caused by lack of Internet connection
-        Alert.alert('Error!', error.message);
-        return false;
-      });
   };
 
   return (

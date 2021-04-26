@@ -100,25 +100,23 @@ export const BookList = () => {
       parseQuery.equalTo('authors', queryAuthorValue);
     }
 
-    return await parseQuery
-      .find()
-      .then(async books => {
-        // Many-to-many objects retrieval
-        // In this example we need to get every related author Parse.Object
-        // and add it to our query result objects
-        for (let book of books) {
-          // This query is done by creating a relation and querying it
-          let bookAuthorsRelation = book.relation('authors');
-          book.authorsObjects = await bookAuthorsRelation.query().find();
-        }
-        setQueriedBooks(books);
-        return true;
-      })
-      .catch(error => {
-        // Error can be caused by lack of Internet connection
-        Alert.alert('Error!', error.message);
-        return false;
-      });
+    try {
+      let books = await parseQuery.find();
+      // Many-to-many objects retrieval
+      // In this example we need to get every related author Parse.Object
+      // and add it to our query result objects
+      for (let book of books) {
+        // This query is done by creating a relation and querying it
+        let bookAuthorsRelation = book.relation('authors');
+        book.authorsObjects = await bookAuthorsRelation.query().find();
+      }
+      setQueriedBooks(books);
+      return true;
+    } catch (error) {
+      // Error can be caused by lack of Internet connection
+      Alert.alert('Error!', error.message);
+      return false;
+    }
   };
 
   return (
