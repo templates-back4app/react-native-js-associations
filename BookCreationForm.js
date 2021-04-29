@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Alert, StyleSheet, View} from 'react-native';
+import {Alert, ScrollView, StyleSheet, View} from 'react-native';
 import Parse from 'parse/react-native';
 import {
   Checkbox,
@@ -20,6 +20,7 @@ export const BookCreationForm = () => {
   const [authors, setAuthors] = useState(null);
   const [genres, setGenres] = useState(null);
   const [bookTitle, setBookTitle] = useState('');
+  const [bookYear, setBookYear] = useState('');
   const [bookISBD, setBookISBD] = useState('');
   const [bookPublisher, setBookPublisher] = useState('');
   const [bookAuthors, setBookAuthors] = useState([]);
@@ -66,6 +67,7 @@ export const BookCreationForm = () => {
       // the screen form fields, retrieving the user choices
       // as a complete Parse.Object, when applicable;
       const bookTitleValue = bookTitle;
+      const bookYearValue = Number(bookYear);
       const bookISBDValue = bookISBD;
       // For example, bookPublisher holds the value from
       // RadioButton.Group field with its options being every
@@ -83,6 +85,9 @@ export const BookCreationForm = () => {
       // Set data to parse object
       // Simple title field
       Book.set('title', bookTitleValue);
+
+      // Simple number field
+      Book.set('year', bookYearValue);
 
       // 1:1 relation, need to check for uniqueness of value before creating a new ISBD object
       let isbdQuery = new Parse.Query('ISBD');
@@ -147,12 +152,19 @@ export const BookCreationForm = () => {
 
   return (
     <>
-      <View style={Styles.wrapper}>
+      <ScrollView style={Styles.wrapper}>
         <Title>{'New Book'}</Title>
         <PaperTextInput
           value={bookTitle}
           onChangeText={text => setBookTitle(text)}
           label="Title"
+          mode="outlined"
+          style={Styles.form_input}
+        />
+        <PaperTextInput
+          value={bookYear}
+          onChangeText={text => setBookYear(text)}
+          label="Publishing Year"
           mode="outlined"
           style={Styles.form_input}
         />
@@ -220,7 +232,7 @@ export const BookCreationForm = () => {
           style={Styles.submit_button}>
           {'Create'}
         </PaperButton>
-      </View>
+      </ScrollView>
     </>
   );
 };
